@@ -1,0 +1,68 @@
+{
+  "name": "kuron",
+  "version": "0.0.1",
+  "description": "A lightweight framework for Cloudflare Workers scheduled jobs with a Hono-inspired API.",
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "cron",
+    "scheduled",
+    "jobs",
+    "framework",
+    "typescript"
+  ],
+  "homepage": "https://kuron.js.org",
+  "bugs": {
+    "url": "https://github.com/AustinZhu/kuron/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AustinZhu/kuron.git"
+  },
+  "author": "Austin Zhu",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "check": "biome check --write",
+    "dev": "tsc --watch",
+    "format": "biome format --write",
+    "lint": "biome lint --write",
+    "prepublishOnly": "pnpm run build && pnpm run typecheck && pnpm run test",
+    "test": "vitest run",
+    "test:ci": "CI=1 vitest run --coverage",
+    "test:coverage": "vitest run --coverage",
+    "test:snapshot": "vitest run --update",
+    "test:ui": "vitest --ui",
+    "test:watch": "vitest watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.6",
+    "@cloudflare/workers-types": "^4.20251011.0",
+    "@types/node": "^24.8.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}
