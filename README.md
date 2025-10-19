@@ -37,6 +37,20 @@ const cron = new Cron()
 export default cron;
 ```
 
+Or using a named function for better logging:
+
+```typescript
+import { Cron } from 'kuron';
+
+const cron = new Cron()
+  .schedule('0 15 * * *', async function afternoonCleanup(c) {
+    console.log('Running job:', c.name); // "afternoonCleanup"
+    // Your job logic here
+  });
+
+export default cron;
+```
+
 ## API Reference
 
 ### `new Cron<Environment>()`
@@ -77,7 +91,7 @@ Register middleware to run before job handlers.
 ```typescript
 // Logging middleware
 cron.use(async (c, next) => {
-  console.log('Job started:', c.controller.cron);
+  console.log('Job started:', c.cron, c.name ? `(${c.name})` : '');
   const start = Date.now();
   await next();
   const duration = Date.now() - start;
@@ -106,7 +120,8 @@ Register a global error handler.
 ```typescript
 cron.onError((err, c) => {
   console.error('Job failed:', {
-    cron: c.controller.cron,
+    cron: c.cron,
+    name: c.name,
     error: err.message,
     stack: err.stack,
   });
@@ -121,7 +136,7 @@ cron.onError((err, c) => {
 The context object passed to handlers and middleware:
 
 ```typescript
-interface CronContext<E> {
+interface CronContext<E> extends ScheduledController {
   // Environment bindings (secrets, KV namespaces, etc.)
   env: E['Bindings'];
   
@@ -129,10 +144,17 @@ interface CronContext<E> {
   var: E['Variables'];
   
   // Cloudflare Workers execution context
-  ctx: ExecutionContext;
+  executionCtx: ExecutionContext;
   
-  // Scheduled controller with cron info
-  controller: ScheduledController;
+  // Cron pattern for this job (e.g., "0 15 * * *")
+  cron: string;
+  
+  // Name of the handler function (if provided as a named function)
+  name?: string;
+  
+  // ScheduledController properties (inherited)
+  // - scheduledTime: number
+  // - noRetry(): void
   
   // Get a variable
   get: <K extends keyof E['Variables']>(key: K) => E['Variables'][K];
@@ -146,8 +168,11 @@ interface CronContext<E> {
 
 - `env`: Access environment bindings (secrets, KV, D1, etc.)
 - `var`: Access/modify custom variables
-- `ctx`: Cloudflare Workers ExecutionContext
-- `controller`: ScheduledController with cron pattern and scheduled time
+- `executionCtx`: Cloudflare Workers ExecutionContext for `waitUntil()` and `passThroughOnException()`
+- `cron`: The cron pattern string that triggered this job
+- `name`: Optional name of the handler function (captured from `function.name`)
+- `scheduledTime`: Unix timestamp (ms) when the job was scheduled (inherited from `ScheduledController`)
+- `noRetry()`: Call to prevent automatic retries on failure (inherited from `ScheduledController`)
 - `get(key)`: Get a custom variable
 - `set(key, value)`: Set a custom variable
 
@@ -156,6 +181,7 @@ interface CronContext<E> {
 ### Multiple Jobs
 
 ```typescript
+// Using anonymous functions
 const cron = new Cron<Environment>()
   .schedule('0 0 * * *', async (c) => {
     console.log('Daily midnight job');
@@ -245,7 +271,8 @@ const cron = new Cron<Environment>()
     // Global error handling
     await reportToErrorService({
       error: err,
-      cron: c.controller.cron,
+      cron: c.cron,
+      name: c.name,
       timestamp: new Date().toISOString(),
     });
   });
@@ -316,7 +343,9 @@ cron.schedule('0 * * * *', async (c) => {
   c.env.DATABASE_URL; // string
   c.var.userId;       // string
   c.get('userId');    // string
-  c.controller.cron;  // "0 * * * *" (exact literal type!)
+  c.cron;             // "0 * * * *" (exact literal type!)
+  c.name;             // string | undefined
+  c.scheduledTime;    // number
 });
 ```
 
@@ -328,8 +357,8 @@ Similar to how Hono tracks route paths, the Cron framework tracks cron patterns 
 // Single pattern
 const dailyCron = new Cron<MyEnvironment>()
   .schedule('0 15 * * *', async (c) => {
-    // c.controller.cron has type: "0 15 * * *"
-    console.log(c.controller.cron);
+    // c.cron has type: "0 15 * * *"
+    console.log(c.cron);
   });
 
 // Type: Cron<MyEnvironment, "0 15 * * *">
@@ -337,10 +366,10 @@ const dailyCron = new Cron<MyEnvironment>()
 // Multiple patterns
 const multiCron = new Cron<MyEnvironment>()
   .schedule('0 * * * *', async (c) => {
-    // c.controller.cron has type: "0 * * * *"
+    // c.cron has type: "0 * * * *"
   })
   .schedule('0 0 * * *', async (c) => {
-    // c.controller.cron has type: "0 0 * * *"
+    // c.cron has type: "0 0 * * *"
   });
 
 // Type: Cron<MyEnvironment, "0 * * * *" | "0 0 * * *">
@@ -360,12 +389,13 @@ type Patterns = ExtractPatterns<typeof multiCron>;
 
 ## Best Practices
 
-1. **Use Middleware for Common Logic**: Extract shared setup, logging, and cleanup into middleware
-2. **Handle Errors Gracefully**: Always implement `.onError()` for production workloads
-3. **Keep Jobs Idempotent**: Jobs should be safe to retry in case of failures
-4. **Use ExecutionContext**: Call `c.ctx.waitUntil()` for background tasks
-5. **Log Extensively**: Use middleware for consistent logging across all jobs
-6. **Test Locally**: Use Wrangler to test scheduled triggers locally
+1. **Use Named Functions**: Define handlers as named functions instead of anonymous arrow functions for better logging and debugging via `c.name`
+2. **Use Middleware for Common Logic**: Extract shared setup, logging, and cleanup into middleware
+3. **Handle Errors Gracefully**: Always implement `.onError()` for production workloads
+4. **Keep Jobs Idempotent**: Jobs should be safe to retry in case of failures
+5. **Use ExecutionContext**: Call `c.executionCtx.waitUntil()` for background tasks
+6. **Log Extensively**: Use middleware for consistent logging across all jobs, including `c.name` and `c.cron`
+7. **Test Locally**: Use Wrangler to test scheduled triggers locally
 
 ## Comparison with Hono
 

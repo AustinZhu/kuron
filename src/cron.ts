@@ -13,7 +13,8 @@ export class Cron<E extends Env = BlankEnv, P extends string = never> {
    */
   schedule<Pattern extends string>(pattern: Pattern, handler: CronHandler<E, Pattern>): Cron<E, P | Pattern> {
     // Type-safe at call site, runtime needs any pattern
-    this.jobs.push({ pattern, handler: handler as CronHandler<E> });
+    const handlerName = handler.name.length > 0 ? handler.name : undefined;
+    this.jobs.push({ pattern, handler: handler as CronHandler<E>, name: handlerName });
     return this as Cron<E, P | Pattern>;
   }
 
@@ -69,6 +70,7 @@ export class Cron<E extends Env = BlankEnv, P extends string = never> {
    * Execute a single job with middleware chain
    */
   private async executeJob(c: CronContext<E>, job: ScheduledJob<E>): Promise<void> {
+    c.name = job.name;
     const middlewareChain = [...this.middlewares];
     let index = 0;
 
@@ -85,5 +87,6 @@ export class Cron<E extends Env = BlankEnv, P extends string = never> {
     };
 
     await next();
+    c.name = undefined;
   }
 }

@@ -9,8 +9,9 @@ export function createContext<E extends Env = BlankEnv>(
 
   return {
     env,
-    ctx,
-    controller,
+    executionCtx: ctx,
+    ...controller,
+    name: undefined,
     get: (key) => variables.get(key as string) as E['Variables'][typeof key],
     set: (key, value) => variables.set(key as string, value),
     var: new Proxy(
