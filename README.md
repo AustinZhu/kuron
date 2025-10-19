@@ -1,5 +1,11 @@
 # Kuron
 
+[![GitHub](https://img.shields.io/github/license/AustinZhu/kuron)](https://github.com/AustinZhu/kuron/blob/main/LICENSE)
+[![npm](https://img.shields.io/npm/v/kuron)](https://www.npmjs.com/package/kuron)
+[![npm](https://img.shields.io/npm/dm/kuron)](https://www.npmjs.com/package/kuron)
+[![Bundle Size](https://img.shields.io/bundlephobia/min/kuron)](https://bundlephobia.com/result?p=kuron)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/kuron)](https://bundlephobia.com/result?p=kuron)
+
 A lightweight framework for Cloudflare Workers scheduled jobs with a Hono-inspired API.
 
 ## Features
@@ -351,22 +357,6 @@ type Patterns = ExtractPatterns<typeof multiCron>;
 - 💡 **IntelliSense**: Better autocomplete and hover information
 - 📚 **Self-Documenting**: See all patterns in type hints
 - 🔄 **Safe Refactoring**: Rename patterns with confidence
-
-### Extending Environment
-
-```typescript
-// In your env.d.ts
-import type { Env } from 'hono/types';
-
-declare global {
-  export interface Environment extends Env {
-    Bindings: Cloudflare.Env;
-    Variables: {
-      service: MyService;
-    };
-  }
-}
-```
 
 ## Best Practices
 
