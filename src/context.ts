@@ -1,4 +1,4 @@
-import type { BlankEnv, CronContext, Env } from './types';
+import type { BlankEnv, CronContext, CronPattern, Env } from './types';
 
 export function createContext<E extends Env = BlankEnv>(
   controller: ScheduledController,
@@ -11,6 +11,7 @@ export function createContext<E extends Env = BlankEnv>(
     env,
     executionCtx: ctx,
     ...controller,
+    cron: controller.cron as CronPattern,
     name: undefined,
     get: (key) => variables.get(key as string) as E['Variables'][typeof key],
     set: (key, value) => variables.set(key as string, value),

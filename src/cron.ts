@@ -1,5 +1,5 @@
 import { createContext } from './context';
-import type { BlankEnv, CronContext, CronErrorHandler, CronHandler, CronMiddleware, Env, ScheduledJob } from './types';
+import type { BlankEnv, CronContext, CronErrorHandler, CronHandler, CronMiddleware, CronPattern, Env, ScheduledJob } from './types';
 
 export class Cron<E extends Env = BlankEnv, P extends string = never> {
   private jobs: ScheduledJob<E>[] = [];
@@ -11,7 +11,7 @@ export class Cron<E extends Env = BlankEnv, P extends string = never> {
    * @param pattern - Cron pattern (e.g., "0 15 * * *")
    * @param handler - Handler function to execute
    */
-  schedule<Pattern extends string>(pattern: Pattern, handler: CronHandler<E, Pattern>): Cron<E, P | Pattern> {
+  schedule<Pattern extends CronPattern>(pattern: Pattern, handler: CronHandler<E, Pattern>): Cron<E, P | Pattern> {
     // Type-safe at call site, runtime needs any pattern
     const handlerName = handler.name.length > 0 ? handler.name : undefined;
     this.jobs.push({ pattern, handler: handler as CronHandler<E>, name: handlerName });

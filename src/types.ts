@@ -11,7 +11,7 @@ export interface BlankEnv {
   Variables: Variables;
 }
 
-export interface CronContext<E extends Env = BlankEnv, P extends string = string> extends ScheduledController {
+export interface CronContext<E extends Env = BlankEnv, P extends CronPattern = CronPattern> extends ScheduledController {
   env: E['Bindings'];
   var: E['Variables'];
   executionCtx: ExecutionContext;
@@ -21,7 +21,7 @@ export interface CronContext<E extends Env = BlankEnv, P extends string = string
   set: <K extends keyof E['Variables']>(key: K, value: E['Variables'][K]) => void;
 }
 
-export type CronHandler<E extends Env = BlankEnv, P extends string = string> = (
+export type CronHandler<E extends Env = BlankEnv, P extends CronPattern = CronPattern> = (
   c: CronContext<E, P>,
 ) => Promise<void> | void;
 
@@ -32,8 +32,10 @@ export type CronMiddleware<E extends Env = BlankEnv> = (
 
 export type CronErrorHandler<E extends Env = BlankEnv> = (err: Error, c: CronContext<E>) => Promise<void> | void;
 
-export interface ScheduledJob<E extends Env = BlankEnv, P extends string = string> {
+export interface ScheduledJob<E extends Env = BlankEnv, P extends CronPattern = CronPattern> {
   pattern: P;
   handler: CronHandler<E, P>;
   name?: string;
 }
+
+export type CronPattern = `${string} ${string} ${string} ${string} ${string}`;
