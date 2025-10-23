@@ -282,7 +282,7 @@ const cron = new Cron<Environment>()
 
 ```typescript
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { Cron } from './lib/cron';
+import { Cron } from 'kuron';
 
 const app = new OpenAPIHono<Environment>()
   .get('/health', (c) => c.text('OK'));
