@@ -1,3 +1,5 @@
+
+
 # Kuron
 
 [![GitHub](https://img.shields.io/github/license/AustinZhu/kuron)](https://github.com/AustinZhu/kuron/blob/main/LICENSE)
@@ -136,7 +138,7 @@ cron.onError((err, c) => {
 The context object passed to handlers and middleware:
 
 ```typescript
-interface CronContext<E> extends ScheduledController {
+interface CronContext<E, P extends string = string> extends ScheduledController {
   // Environment bindings (secrets, KV namespaces, etc.)
   env: E['Bindings'];
   
@@ -147,7 +149,7 @@ interface CronContext<E> extends ScheduledController {
   executionCtx: ExecutionContext;
   
   // Cron pattern for this job (e.g., "0 15 * * *")
-  cron: string;
+  cron: P;
   
   // Name of the handler function (if provided as a named function)
   name?: string;
