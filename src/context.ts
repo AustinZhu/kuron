@@ -10,8 +10,9 @@ export function createContext<E extends Env = BlankEnv>(
   return {
     env,
     executionCtx: ctx,
-    ...controller,
+    scheduledTime: controller.scheduledTime,
     cron: controller.cron as CronPattern,
+    noRetry: () => controller.noRetry(),
     name: undefined,
     get: (key) => variables.get(key as string) as E['Variables'][typeof key],
     set: (key, value) => variables.set(key as string, value),
