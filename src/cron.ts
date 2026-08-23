@@ -43,26 +43,35 @@ export class Cron<E extends Env = BlankEnv, P extends string = never> {
   scheduled = async (controller: ScheduledController, env: E['Bindings'], ctx: ExecutionContext): Promise<void> => {
     const c = createContext<E>(controller, env, ctx);
 
-    try {
-      // Find matching job(s) for this cron pattern
-      const matchingJobs = this.jobs.filter((job) => job.pattern === controller.cron);
+    // Find matching job(s) for this cron pattern
+    const matchingJobs = this.jobs.filter((job) => job.pattern === controller.cron);
 
-      if (matchingJobs.length === 0) {
-        console.warn(`No jobs registered for cron pattern: ${controller.cron}`);
-        return;
-      }
+    if (matchingJobs.length === 0) {
+      console.warn(`No jobs registered for cron pattern: ${controller.cron}`);
+      return;
+    }
 
-      // Execute each matching job
-      for (const job of matchingJobs) {
+    // Execute each matching job, isolating failures so one job cannot cancel the others
+    const unhandled: unknown[] = [];
+
+    for (const job of matchingJobs) {
+      try {
         await this.executeJob(c, job);
+      } catch (error) {
+        if (this.errorHandler) {
+          await this.errorHandler(error as Error, c);
+        } else {
+          console.error('Unhandled error in scheduled job:', error);
+          unhandled.push(error);
+        }
       }
-    } catch (error) {
-      if (this.errorHandler) {
-        await this.errorHandler(error as Error, c);
-      } else {
-        console.error('Unhandled error in scheduled job:', error);
-        throw error;
-      }
+    }
+
+    if (unhandled.length === 1) {
+      throw unhandled[0];
+    }
+    if (unhandled.length > 1) {
+      throw new AggregateError(unhandled, `${unhandled.length} jobs failed for cron pattern: ${controller.cron}`);
     }
   };
 
