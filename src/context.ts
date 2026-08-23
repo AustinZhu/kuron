@@ -4,6 +4,7 @@ export function createContext<E extends Env = BlankEnv>(
   controller: ScheduledController,
   env: E['Bindings'],
   ctx: ExecutionContext,
+  name?: string,
 ): CronContext<E> {
   const variables = new Map<string, unknown>();
 
@@ -13,7 +14,7 @@ export function createContext<E extends Env = BlankEnv>(
     scheduledTime: controller.scheduledTime,
     cron: controller.cron as CronPattern,
     noRetry: () => controller.noRetry(),
-    name: undefined,
+    name,
     get: (key) => variables.get(key as string) as E['Variables'][typeof key],
     set: (key, value) => variables.set(key as string, value),
     var: new Proxy(

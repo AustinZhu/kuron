@@ -41,8 +41,6 @@ export class Cron<E extends Env = BlankEnv, P extends string = never> {
    * This is the function that gets exported and called by the Workers runtime
    */
   scheduled = async (controller: ScheduledController, env: E['Bindings'], ctx: ExecutionContext): Promise<void> => {
-    const c = createContext<E>(controller, env, ctx);
-
     // Find matching job(s) for this cron pattern
     const matchingJobs = this.jobs.filter((job) => job.pattern === controller.cron);
 
@@ -55,6 +53,9 @@ export class Cron<E extends Env = BlankEnv, P extends string = never> {
     const unhandled: unknown[] = [];
 
     for (const job of matchingJobs) {
+      // Each job gets its own context so variables cannot leak between jobs
+      const c = createContext<E>(controller, env, ctx, job.name);
+
       try {
         await this.executeJob(c, job);
       } catch (error) {
@@ -79,7 +80,6 @@ export class Cron<E extends Env = BlankEnv, P extends string = never> {
    * Execute a single job with middleware chain
    */
   private async executeJob(c: CronContext<E>, job: ScheduledJob<E>): Promise<void> {
-    c.name = job.name;
     const middlewareChain = [...this.middlewares];
     let index = 0;
 
@@ -96,6 +96,5 @@ export class Cron<E extends Env = BlankEnv, P extends string = never> {
     };
 
     await next();
-    c.name = undefined;
   }
 }
