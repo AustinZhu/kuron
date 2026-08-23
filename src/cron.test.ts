@@ -50,6 +50,31 @@ describe('dispatch', () => {
     expect(second).toHaveBeenCalledTimes(1);
   });
 
+  it('accepts the Quartz extensions Cloudflare supports', () => {
+    const patterns = ['59 23 LW * *', '0 18 * * 6L', '0 18 * * friL', '10 7 * * mon-fri', '*/3 * * * *', '0 15 1 * *'];
+
+    for (const pattern of patterns) {
+      expect(() => new Cron<TestEnv>().schedule(pattern as `${string} ${string} ${string} ${string} ${string}`, vi.fn())).not.toThrow();
+    }
+  });
+
+  it('rejects a pattern that is not five fields', () => {
+    const cron = new Cron<TestEnv>();
+
+    expect(() => cron.schedule('0 15 * *' as never, vi.fn())).toThrow('Invalid cron pattern');
+    expect(() => cron.schedule('0 15 * * * *' as never, vi.fn())).toThrow('Invalid cron pattern');
+    expect(() => cron.schedule('@daily' as never, vi.fn())).toThrow('Invalid cron pattern');
+  });
+
+  it('matches regardless of the spacing used on either side', async () => {
+    const handler = vi.fn();
+    const cron = new Cron<TestEnv>().schedule('0  15 *   * *' as never, handler);
+
+    await run(cron, ' 0 15 * * *  ');
+
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
   it('warns and does nothing when no job matches', async () => {
     const handler = vi.fn();
     const cron = new Cron<TestEnv>().schedule('0 15 * * *', handler);
@@ -250,6 +275,17 @@ describe('error handling', () => {
 
     expect(error).toBeInstanceOf(AggregateError);
     expect((error as AggregateError).errors.map((e: Error) => e.message)).toEqual(['a', 'b']);
+  });
+
+  it('routes an unmatched pattern to onError instead of only warning', async () => {
+    const onError = vi.fn();
+    const cron = new Cron<TestEnv>().schedule('0 15 * * *', vi.fn()).onError(onError);
+
+    await run(cron, '*/5 * * * *');
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect((onError.mock.calls[0][0] as Error).message).toContain('*/5 * * * *');
+    expect(console.warn).not.toHaveBeenCalled();
   });
 
   it('routes errors to onError with the failing job context', async () => {

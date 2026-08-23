@@ -1,6 +1,20 @@
 import { createContext } from './context';
 import type { BlankEnv, CronContext, CronErrorHandler, CronHandler, CronMiddleware, CronPattern, Env, ScheduledJob } from './types';
 
+// Deliberately permissive: Cloudflare accepts Quartz extensions such as "LW", "6L" and "mon-fri",
+// so only the field count and character set are checked, never the numeric ranges.
+const CRON_FIELD = /^[0-9a-zA-Z*,\-/?#]+$/;
+
+function normalizePattern(pattern: string): string {
+  const fields = pattern.trim().split(/\s+/);
+
+  if (fields.length !== 5 || !fields.every((field) => CRON_FIELD.test(field))) {
+    throw new Error(`Invalid cron pattern: "${pattern}". Expected five space-separated fields, e.g. "0 15 * * *".`);
+  }
+
+  return fields.join(' ');
+}
+
 export class Cron<E extends Env = BlankEnv, P extends string = never> {
   private jobs: ScheduledJob<E>[] = [];
   private middlewares: CronMiddleware<E>[] = [];
@@ -14,7 +28,7 @@ export class Cron<E extends Env = BlankEnv, P extends string = never> {
   schedule<Pattern extends CronPattern>(pattern: Pattern, handler: CronHandler<E, Pattern>): Cron<E, P | Pattern> {
     // Type-safe at call site, runtime needs any pattern
     const handlerName = handler.name.length > 0 ? handler.name : undefined;
-    this.jobs.push({ pattern, handler: handler as CronHandler<E>, name: handlerName });
+    this.jobs.push({ pattern: normalizePattern(pattern) as Pattern, handler: handler as CronHandler<E>, name: handlerName });
     return this as Cron<E, P | Pattern>;
   }
 
@@ -41,11 +55,18 @@ export class Cron<E extends Env = BlankEnv, P extends string = never> {
    * This is the function that gets exported and called by the Workers runtime
    */
   scheduled = async (controller: ScheduledController, env: E['Bindings'], ctx: ExecutionContext): Promise<void> => {
-    // Find matching job(s) for this cron pattern
-    const matchingJobs = this.jobs.filter((job) => job.pattern === controller.cron);
+    // Match on the normalized pattern so spacing differences against wrangler.toml still line up
+    const cron = controller.cron.trim().replace(/\s+/g, ' ');
+    const matchingJobs = this.jobs.filter((job) => job.pattern === cron);
 
     if (matchingJobs.length === 0) {
-      console.warn(`No jobs registered for cron pattern: ${controller.cron}`);
+      const error = new Error(`No jobs registered for cron pattern: ${controller.cron}`);
+
+      if (this.errorHandler) {
+        await this.errorHandler(error, createContext<E>(controller, env, ctx));
+      } else {
+        console.warn(error.message);
+      }
       return;
     }
 
