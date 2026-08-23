@@ -81,20 +81,22 @@ export class Cron<E extends Env = BlankEnv, P extends string = never> {
    */
   private async executeJob(c: CronContext<E>, job: ScheduledJob<E>): Promise<void> {
     const middlewareChain = [...this.middlewares];
-    let index = 0;
+    let index = -1;
 
-    const next = async (): Promise<void> => {
-      if (index < middlewareChain.length) {
-        const middleware = middlewareChain[index++];
-        if (middleware) {
-          await middleware(c, next);
-        }
+    const dispatch = async (i: number): Promise<void> => {
+      if (i <= index) {
+        throw new Error('next() called multiple times');
+      }
+      index = i;
+
+      if (i < middlewareChain.length) {
+        await middlewareChain[i](c, () => dispatch(i + 1));
       } else {
         // All middleware executed, now run the actual job handler
         await job.handler(c);
       }
     };
 
-    await next();
+    await dispatch(0);
   }
 }
