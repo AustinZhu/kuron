@@ -54,7 +54,9 @@ describe('dispatch', () => {
     const patterns = ['59 23 LW * *', '0 18 * * 6L', '0 18 * * friL', '10 7 * * mon-fri', '*/3 * * * *', '0 15 1 * *'];
 
     for (const pattern of patterns) {
-      expect(() => new Cron<TestEnv>().schedule(pattern as `${string} ${string} ${string} ${string} ${string}`, vi.fn())).not.toThrow();
+      expect(() =>
+        new Cron<TestEnv>().schedule(pattern as `${string} ${string} ${string} ${string} ${string}`, vi.fn()),
+      ).not.toThrow();
     }
   });
 
@@ -138,9 +140,7 @@ describe('middleware', () => {
 
   it('lets middleware short-circuit by not calling next()', async () => {
     const handler = vi.fn();
-    const cron = new Cron<TestEnv>()
-      .use(async () => {})
-      .schedule('0 15 * * *', handler);
+    const cron = new Cron<TestEnv>().use(async () => {}).schedule('0 15 * * *', handler);
 
     await run(cron);
 

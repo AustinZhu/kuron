@@ -11,7 +11,8 @@ export interface BlankEnv {
   Variables: Variables;
 }
 
-export interface CronContext<E extends Env = BlankEnv, P extends CronPattern = CronPattern> extends ScheduledController {
+export interface CronContext<E extends Env = BlankEnv, P extends CronPattern = CronPattern>
+  extends ScheduledController {
   env: E['Bindings'];
   var: E['Variables'];
   executionCtx: ExecutionContext;

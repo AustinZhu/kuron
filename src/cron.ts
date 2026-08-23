@@ -1,5 +1,14 @@
 import { createContext } from './context';
-import type { BlankEnv, CronContext, CronErrorHandler, CronHandler, CronMiddleware, CronPattern, Env, ScheduledJob } from './types';
+import type {
+  BlankEnv,
+  CronContext,
+  CronErrorHandler,
+  CronHandler,
+  CronMiddleware,
+  CronPattern,
+  Env,
+  ScheduledJob,
+} from './types';
 
 // Deliberately permissive: Cloudflare accepts Quartz extensions such as "LW", "6L" and "mon-fri",
 // so only the field count and character set are checked, never the numeric ranges.
@@ -28,7 +37,11 @@ export class Cron<E extends Env = BlankEnv, P extends string = never> {
   schedule<Pattern extends CronPattern>(pattern: Pattern, handler: CronHandler<E, Pattern>): Cron<E, P | Pattern> {
     // Type-safe at call site, runtime needs any pattern
     const handlerName = handler.name.length > 0 ? handler.name : undefined;
-    this.jobs.push({ pattern: normalizePattern(pattern) as Pattern, handler: handler as CronHandler<E>, name: handlerName });
+    this.jobs.push({
+      pattern: normalizePattern(pattern) as Pattern,
+      handler: handler as CronHandler<E>,
+      name: handlerName,
+    });
     return this as Cron<E, P | Pattern>;
   }
 
