@@ -1,6 +1,6 @@
 {
   "name": "kuron",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "packageManager": "pnpm@10.33.0",
   "description": "A lightweight framework for Cloudflare Workers scheduled jobs with a Hono-inspired API.",
   "keywords": [
@@ -34,7 +34,8 @@
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.build.json",
