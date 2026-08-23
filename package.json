@@ -50,6 +50,14 @@
     "test:watch": "vitest watch",
     "typecheck": "tsc --noEmit"
   },
+  "peerDependencies": {
+    "@cloudflare/workers-types": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@cloudflare/workers-types": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@biomejs/biome": "^2.2.6",
     "@cloudflare/workers-types": "^4.20251011.0",
