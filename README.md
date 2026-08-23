@@ -25,6 +25,14 @@ A lightweight framework for Cloudflare Workers scheduled jobs with a Hono-inspir
 npm install kuron
 ```
 
+Kuron's types reference the Workers globals `ScheduledController` and `ExecutionContext`.
+If your project does not already generate `worker-configuration.d.ts` via `wrangler types`,
+install the types package alongside it:
+
+```bash
+npm install -D @cloudflare/workers-types
+```
+
 ## Quick Start
 
 ```typescript
@@ -97,7 +105,7 @@ cron.use(async (c, next) => {
   const start = Date.now();
   await next();
   const duration = Date.now() - start;
-  console.log(\`Job completed in \${duration}ms\`);
+  console.log(`Job completed in ${duration}ms`);
 });
 
 // Auth middleware
@@ -108,6 +116,10 @@ cron.use(async (c, next) => {
   await next();
 });
 ```
+
+Call `next()` at most once per middleware. Skipping it short-circuits the chain and the
+job handler never runs; calling it twice throws `next() called multiple times` rather than
+silently running the handler again with part of the chain skipped.
 
 ### `.onError(handler)`
 
@@ -132,6 +144,19 @@ cron.onError((err, c) => {
   // await sendToSentry(err);
 });
 ```
+
+The handler is called once per failing job, with that job's own context. It also receives
+the "no jobs registered for this pattern" misconfiguration, so a pattern that drifts out of
+sync with `wrangler.toml` reaches your alerting instead of only `console.warn`.
+
+Without `.onError()`, a failing job is logged and rethrown so the Workers runtime can retry
+it — one failure rethrows as-is, several are combined into an `AggregateError`. Registering
+`.onError()` marks errors as handled, which means the invocation reports success and the
+runtime will **not** retry it. Rethrow from inside the handler if you want retries.
+
+Jobs sharing a pattern run in sequence and are isolated from each other: one throwing does
+not cancel the rest, and each gets a fresh context, so variables set by middleware during
+one job are never visible to the next.
 
 ### Context Object (`c`)
 
@@ -191,7 +216,7 @@ const cron = new Cron<Environment>()
   .schedule('0 12 * * *', async (c) => {
     console.log('Daily noon job');
   })
-  .schedule('0 0 * * 0', async (c) => {
+  .schedule('0 0 * * SUN', async (c) => {
     console.log('Weekly Sunday job');
   });
 ```
@@ -204,7 +229,7 @@ const cron = new Cron<Environment>()
   .use(async (c, next) => {
     const start = Date.now();
     await next();
-    console.log(\`Duration: \${Date.now() - start}ms\`);
+    console.log(`Duration: ${Date.now() - start}ms`);
   })
   // Setup middleware
   .use(async (c, next) => {
@@ -309,7 +334,7 @@ Cloudflare Workers supports standard cron syntax:
 │ ┌───────────── hour (0 - 23)
 │ │ ┌───────────── day of the month (1 - 31)
 │ │ │ ┌───────────── month (1 - 12)
-│ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday)
+│ │ │ │ ┌───────────── day of the week (1 - 7) (Sunday to Saturday)
 │ │ │ │ │
 * * * * *
 ```
@@ -318,9 +343,19 @@ Cloudflare Workers supports standard cron syntax:
 
 - `0 15 * * *` - Daily at 3:00 PM UTC
 - `*/5 * * * *` - Every 5 minutes
-- `0 0 * * 0` - Every Sunday at midnight
+- `0 0 * * SUN` - Every Sunday at midnight
 - `0 0 1 * *` - First day of every month at midnight
-- `30 2 * * 1-5` - 2:30 AM UTC, Monday through Friday
+- `30 2 * * MON-FRI` - 2:30 AM UTC, Monday through Friday
+- `59 23 LW * *` - 11:59 PM UTC on the last weekday of the month
+- `0 18 * * FRIL` - 6:00 PM UTC on the last Friday of the month
+
+> **Weekdays are numbered 1 (Sunday) through 7 (Saturday)**, which differs from the
+> 0-6 convention used by Unix cron. Prefer three-letter abbreviations such as `SUN`
+> or `MON-FRI` to avoid the ambiguity. Cloudflare also accepts Quartz extensions
+> like `L`, `LW`, and `6L`.
+
+Patterns are validated when you call `.schedule()`, so a malformed pattern throws at
+startup rather than silently never firing.
 
 ## TypeScript Tips
 
