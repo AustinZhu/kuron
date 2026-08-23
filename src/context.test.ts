@@ -61,6 +61,36 @@ describe('createContext', () => {
     expect(c.get('count')).toBe(7);
   });
 
+  it('enumerates variables set through either api', () => {
+    const { c } = setup();
+
+    c.set('count', 1);
+    c.var.label = 'two';
+
+    expect(Object.keys(c.var)).toEqual(['count', 'label']);
+    expect({ ...c.var }).toEqual({ count: 1, label: 'two' });
+    expect(JSON.stringify(c.var)).toBe('{"count":1,"label":"two"}');
+  });
+
+  it('supports the in operator and delete', () => {
+    const { c } = setup();
+
+    c.set('count', 1);
+    expect('count' in c.var).toBe(true);
+
+    delete (c.var as { count?: number }).count;
+
+    expect('count' in c.var).toBe(false);
+    expect(c.get('count')).toBeUndefined();
+  });
+
+  it('reports nothing for an untouched context', () => {
+    const { c } = setup();
+
+    expect(Object.keys(c.var)).toEqual([]);
+    expect('count' in c.var).toBe(false);
+  });
+
   it('gives each context its own variable store', () => {
     const a = setup().c;
     const b = setup().c;
