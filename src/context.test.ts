@@ -84,11 +84,39 @@ describe('createContext', () => {
     expect(c.get('count')).toBeUndefined();
   });
 
+  it('keeps symbol keys distinct from their string form', () => {
+    const { c } = setup();
+    const key = Symbol('token');
+    const store = c.var as Record<string | symbol, unknown>;
+
+    const set = c.set as (k: unknown, v: unknown) => void;
+    const get = c.get as (k: unknown) => unknown;
+
+    set(key, 'from-symbol');
+    set('token', 'from-string');
+
+    expect(get(key)).toBe('from-symbol');
+    expect(store[key]).toBe('from-symbol');
+    expect(store.token).toBe('from-string');
+    expect(Object.keys(store)).toEqual(['token']);
+  });
+
+  it('treats a numeric key the same through get/set and c.var', () => {
+    const { c } = setup();
+    const store = c.var as Record<string, unknown>;
+
+    (c.set as (k: unknown, v: unknown) => void)(1, 'one');
+
+    expect(store[1]).toBe('one');
+    expect((c.get as (k: unknown) => unknown)(1)).toBe('one');
+  });
+
   it('reports nothing for an untouched context', () => {
     const { c } = setup();
 
     expect(Object.keys(c.var)).toEqual([]);
     expect('count' in c.var).toBe(false);
+    expect(Object.getOwnPropertyDescriptor(c.var, 'count')).toBeUndefined();
   });
 
   it('gives each context its own variable store', () => {
