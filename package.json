@@ -36,7 +36,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "check": "biome check --write",
     "dev": "tsc --watch",
     "format": "biome format --write",
